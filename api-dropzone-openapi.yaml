@@ -1,0 +1,117 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Dropzone
+  description: Dropzone API for uploading invoice files
+  contact:
+    name: Parsly
+    email: dev@parsly.com
+    url: http://parsly.com
+servers:
+  - url: https://parsly.com/api/dropzone/v1
+  - url: /api/dropzone/v1
+paths:
+  /healthcheck:
+    description: |
+      Service health check mechanisms.
+    get:
+      description: |
+        Return service health check status.
+      operationId: getHealthCheck
+      responses:
+        '200':
+          description: health check status
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /attachments:
+    description: |
+      Invoice files.
+    post:
+      description: |
+        Upload invoice attachments.
+      operationId: postAttachments
+      requestBody:
+        description: Array of invoice attachments.
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              properties:
+                file:
+                  type: array
+                  items:
+                    type: string
+                    format: binary
+      responses:
+        '201':
+          description: List of uploaded invoice attachments.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AttachmentList'
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    AttachmentList:
+      type: object
+      required:
+        - id
+        - attachments
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
+        attachments:
+          type: array
+          items:
+            $ref: "#/components/schemas/Attachment"
+    Attachment:
+      type: object
+      required:
+        - id
+        - external_id
+        - file_name
+        - content_type
+        - checksum
+        - size
+      properties:
+        id:
+          type: string
+          format: uuid
+          x-go-type: uuid.UUID
+          x-go-type-import:
+            path: github.com/google/uuid
+        external_id:
+          type: string
+          maxLength: 200
+        file_name:
+          type: string
+          maxLength: 1024
+        content_type:
+          type: string
+          maxLength: 1024
+        checksum:
+          type: string
+        size:
+          type: integer
+    Error:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
