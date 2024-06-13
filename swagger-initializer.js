@@ -14,7 +14,7 @@ window.onload = function() {
         ],
         layout: "StandaloneLayout",
         queryConfigEnabled: false,
-        urls: [{name:"dropzone",url:"/api-dropzone-openapi.yaml"}],
+        urls: [{name:"dropzone",url:"/datahub-api/api-dropzone-openapi.yaml"}],
       })
       
       //</editor-fold>
