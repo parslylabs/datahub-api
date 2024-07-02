@@ -25,7 +25,7 @@ paths:
             application/json:
               schema:
                 type: boolean
-  /results/{uploadId}:
+  /uploads/{uploadId}:
     description: |
       Available result status of uploaded file group.
     get:
@@ -52,7 +52,7 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Error'
-  /results/{uploadId}/{fileId}:
+  /uploads/{uploadId}/files/{fileId}:
     description: |
       Invoice parser results.
     get:
@@ -108,11 +108,11 @@ components:
       type: object
       required:
         - id
-        - results
+        - files
       properties:
         id:
           $ref: "#/components/schemas/ResourceId"
-        results:
+        files:
           type: array
           items:
             $ref: "#/components/schemas/ResultHead"
@@ -121,23 +121,36 @@ components:
         - $ref: '#/components/schemas/ResultHead'
         - type: object
           required:
-          - content
+          - result
           properties:
-            content:
+            result:
               type: object
     ResultHead:
       type: object
       required:
         - id
+        - file_name
+        - content_type
+        - checksum
+        - size
         - status
       properties:
         id:
           $ref: "#/components/schemas/ResourceId"
+        file_name:
+          type: string
+          maxLength: 1024
+        content_type:
+          type: string
+          maxLength: 1024
+        size:
+          type: integer
+          format: int64
         status:
           $ref: "#/components/schemas/ResultStatus"
     ResultStatus:
       type: string
-      enum: [unknown, processed, failed]
+      enum: [unknown, pending, processed, failed]
     Error:
       type: object
       required:
