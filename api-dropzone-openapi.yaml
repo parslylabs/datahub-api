@@ -8,8 +8,7 @@ info:
     email: dev@parsly.com
     url: http://parsly.com
 servers:
-  - url: https://parsly.com/api/dropzone/v1
-  - url: /api/dropzone/v1
+  - url: https://apix.parsly.com/dropzone/v1
 paths:
   /healthcheck:
     description: |
@@ -24,16 +23,23 @@ paths:
           content:
             application/json:
               schema:
-                type: boolean
-  /attachments:
+                $ref: "#/components/schemas/Status"
+  /files:
     description: |
-      Invoice files.
+      Invoice invoice .
     post:
       description: |
-        Upload invoice attachments.
-      operationId: postAttachments
+        Upload invoice files.
+      operationId: postFiles
+      parameters:
+        - name: uploadId
+          in: query
+          description: Optional upload ID (automatically assigned if omitted)
+          required: false
+          schema:
+            $ref: "#/components/schemas/ResourceId"
       requestBody:
-        description: Array of invoice attachments.
+        description: Array of invoice files.
         required: true
         content:
           multipart/form-data:
@@ -45,56 +51,53 @@ paths:
                   items:
                     type: string
                     format: binary
+            encoding:
+              file:
+                contentType: multipart/form-data
+                headers:
+                  X-File-Id:
+                    description: Optional file ID (automatically assigned if omitted)
+                    schema:
+                      $ref: "#/components/schemas/ResourceId"
       responses:
         '201':
-          description: List of uploaded invoice attachments.
+          description: List of uploaded invoice files.
           content:
             application/json:
               schema:
-                $ref: '#/components/schemas/AttachmentList'
-        default:
-          description: unexpected error
-          content:
-            application/json:
-              schema:
-                $ref: '#/components/schemas/Error'
+                $ref: '#/components/schemas/FileList'
 components:
   schemas:
-    AttachmentList:
+    Status:
+      type: boolean
+    ResourceId:
+      type: string
+      minLength: 8
+      maxLength: 256
+      pattern: '^[a-zA-Z0-9]+[a-zA-Z0-9\-]*[a-zA-Z0-9]+$'
+    FileList:
       type: object
       required:
         - id
-        - attachments
+        - files
       properties:
         id:
-          type: string
-          format: uuid
-          x-go-type: uuid.UUID
-          x-go-type-import:
-            path: github.com/google/uuid
-        attachments:
+          $ref: "#/components/schemas/ResourceId"
+        files:
           type: array
           items:
-            $ref: "#/components/schemas/Attachment"
-    Attachment:
+            $ref: "#/components/schemas/File"
+    File:
       type: object
       required:
         - id
-        - external_id
         - file_name
         - content_type
         - checksum
         - size
       properties:
         id:
-          type: string
-          format: uuid
-          x-go-type: uuid.UUID
-          x-go-type-import:
-            path: github.com/google/uuid
-        external_id:
-          type: string
-          maxLength: 200
+          $ref: "#/components/schemas/ResourceId"
         file_name:
           type: string
           maxLength: 1024

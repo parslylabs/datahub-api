@@ -25,41 +25,60 @@ paths:
             application/json:
               schema:
                 type: boolean
-  /results/{list_id}/{attachment_id}:
+  /results/{uploadId}:
+    description: |
+      Available result status of uploaded file group.
+    get:
+      description: |
+        Download available result status of uploaded file group.
+      operationId: getFileGroupResult
+      parameters:
+        - name: uploadId
+          in: path
+          description: Id of uploaded file group
+          required: true
+          schema:
+            $ref: "#/components/schemas/ResourceId"
+      responses:
+        '200':
+          description: file group result status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /results/{uploadId}/{fileId}:
     description: |
       Invoice parser results.
     get:
       description: |
         Download invoice parser result.
-      operationId: getResult
+      operationId: getFileResult
       parameters:
-        - name: list_id
+        - name: uploadId
           in: path
-          description: Id of uploaded attachment list
+          description: Id of uploaded file group
           required: true
           schema:
-            type: string
-            format: uuid
-            x-go-type: uuid.UUID
-            x-go-type-import:
-              path: github.com/google/uuid
-        - name: attachment_id
+            $ref: "#/components/schemas/ResourceId"
+        - name: fileId
           in: path
-          description: Id of uploaded attachment
+          description: Id of uploaded file
           required: true
           schema:
-            type: string
-            format: uuid
-            x-go-type: uuid.UUID
-            x-go-type-import:
-              path: github.com/google/uuid
+            $ref: "#/components/schemas/ResourceId"
       responses:
         '200':
           description: invoice parser result
           content:
             application/json:
               schema:
-                type: object
+                $ref: "#/components/schemas/Result"
         default:
           description: unexpected error
           content:
@@ -68,6 +87,57 @@ paths:
                 $ref: '#/components/schemas/Error'
 components:
   schemas:
+    ResourceId:
+      type: string
+      minLength: 8
+      maxLength: 256
+      pattern: '^[a-zA-Z0-9]+[a-zA-Z0-9\-]*[a-zA-Z0-9]+$'
+    FileList:
+      type: object
+      required:
+        - id
+        - files
+      properties:
+        id:
+          $ref: "#/components/schemas/ResourceId"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/Result"
+    ResultList:
+      type: object
+      required:
+        - id
+        - results
+      properties:
+        id:
+          $ref: "#/components/schemas/ResourceId"
+        results:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResultHead"
+    Result:
+      allOf:
+        - $ref: '#/components/schemas/ResultHead'
+        - type: object
+          required:
+          - content
+          properties:
+            content:
+              type: object
+    ResultHead:
+      type: object
+      required:
+        - id
+        - status
+      properties:
+        id:
+          $ref: "#/components/schemas/ResourceId"
+        status:
+          $ref: "#/components/schemas/ResultStatus"
+    ResultStatus:
+      type: string
+      enum: [unknown, processed, failed]
     Error:
       type: object
       required:
