@@ -1,0 +1,256 @@
+openapi: "3.0.0"
+info:
+  version: 1.0.0
+  title: Pickup
+  description: Pickup API for downloading invoice parser results
+  contact:
+    name: Parsly
+    email: dev@parsly.com
+    url: http://parsly.com
+servers:
+  - url: https://parsly.com/api/pickup/v1
+  - url: /api/pickup/v1
+paths:
+  /healthcheck:
+    description: |
+      Service health check mechanisms.
+    get:
+      description: |
+        Return service health check status.
+      operationId: getHealthCheck
+      responses:
+        '200':
+          description: health check status
+          content:
+            application/json:
+              schema:
+                type: boolean
+  /uploads:
+    description: |
+      Uploaded file groups.
+    get:
+      description: |
+        List uploaded file groups.
+      operationId: getUploads
+      parameters:
+        - $ref: "#/components/parameters/PageIdParam"
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: file groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /uploads/{uploadId}:
+    description: |
+      Uploaded file group.
+    get:
+      description: |
+        Download available result status of uploaded file group.
+      operationId: getFileGroupResult
+      parameters:
+        - name: uploadId
+          in: path
+          description: External Id of uploaded file group
+          required: true
+          schema:
+            $ref: "#/components/schemas/ResourceId"
+      responses:
+        '200':
+          description: file group result status
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/ResultList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+  /uploads/{uploadId}/files/{fileId}:
+    description: |
+      Invoice parser results.
+    get:
+      description: |
+        Download invoice parser result.
+      operationId: getFileResult
+      parameters:
+        - name: uploadId
+          in: path
+          description: Id of uploaded file group
+          required: true
+          schema:
+            $ref: "#/components/schemas/ResourceId"
+        - name: fileId
+          in: path
+          description: External Id of uploaded file
+          required: true
+          schema:
+            $ref: "#/components/schemas/ResourceId"
+      responses:
+        '200':
+          description: invoice parser result
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/Result"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+components:
+  schemas:
+    ResourceId:
+      type: string
+      minLength: 8
+      maxLength: 256
+      pattern: '^[a-zA-Z0-9]+[a-zA-Z0-9\-]*[a-zA-Z0-9]+$'
+    FileList:
+      type: object
+      required:
+        - id
+        - files
+      properties:
+        id:
+          $ref: "#/components/schemas/ResourceId"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/Result"
+    UploadList:
+      type: object
+      required:
+        - uploads
+      properties:
+        uploads:
+          type: array
+          items:
+            $ref: "#/components/schemas/Upload"
+    Upload:
+      type: object
+      required:
+        - id
+        - external_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: int64
+        external_id:
+          $ref: "#/components/schemas/ResourceId"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ResultList:
+      type: object
+      required:
+        - id
+        - external_id
+        - files
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: int64
+        external_id:
+          $ref: "#/components/schemas/ResourceId"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/ResultHead"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    Result:
+      allOf:
+        - $ref: '#/components/schemas/ResultHead'
+        - type: object
+          required:
+          - result
+          properties:
+            result:
+              type: object
+    ResultHead:
+      type: object
+      required:
+        - id
+        - external_id
+        - file_name
+        - content_type
+        - checksum
+        - size
+        - status
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: int64
+        external_id:
+          $ref: "#/components/schemas/ResourceId"
+        file_name:
+          type: string
+          maxLength: 1024
+        content_type:
+          type: string
+          maxLength: 1024
+        size:
+          type: integer
+          format: int64
+        status:
+          $ref: "#/components/schemas/ResultStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    ResultStatus:
+      type: string
+      enum: [unknown, pending, processed, failed]
+    Error:
+      type: object
+      required:
+        - error_code
+        - message
+      properties:
+        error_code:
+          type: string
+        message:
+          type: string
+  parameters:
+    PageIdParam:
+      name: pageId
+      in: query
+      required: false
+      schema:
+        default: 1
+        type: integer
+        minimum: 1
+    PageSizeParam:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        default: 20
+        type: integer
+        minimum: 10
+        maximum: 50
