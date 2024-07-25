@@ -25,9 +25,32 @@ paths:
             application/json:
               schema:
                 type: boolean
+  /uploads:
+    description: |
+      Uploaded file groups.
+    get:
+      description: |
+        List uploaded file groups.
+      operationId: getUploads
+      parameters:
+        - $ref: "#/components/parameters/PageIdParam"
+        - $ref: '#/components/parameters/PageSizeParam'
+      responses:
+        '200':
+          description: file groups
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/UploadList"
+        default:
+          description: unexpected error
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
   /uploads/{uploadId}:
     description: |
-      Available result status of uploaded file group.
+      Uploaded file group.
     get:
       description: |
         Download available result status of uploaded file group.
@@ -35,7 +58,7 @@ paths:
       parameters:
         - name: uploadId
           in: path
-          description: Id of uploaded file group
+          description: External Id of uploaded file group
           required: true
           schema:
             $ref: "#/components/schemas/ResourceId"
@@ -68,7 +91,7 @@ paths:
             $ref: "#/components/schemas/ResourceId"
         - name: fileId
           in: path
-          description: Id of uploaded file
+          description: External Id of uploaded file
           required: true
           schema:
             $ref: "#/components/schemas/ResourceId"
@@ -104,18 +127,58 @@ components:
           type: array
           items:
             $ref: "#/components/schemas/Result"
+    UploadList:
+      type: object
+      required:
+        - uploads
+      properties:
+        uploads:
+          type: array
+          items:
+            $ref: "#/components/schemas/Upload"
+    Upload:
+      type: object
+      required:
+        - id
+        - external_id
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: int64
+        external_id:
+          $ref: "#/components/schemas/ResourceId"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     ResultList:
       type: object
       required:
         - id
+        - external_id
         - files
+        - created_at
+        - updated_at
       properties:
         id:
+          type: string
+          format: int64
+        external_id:
           $ref: "#/components/schemas/ResourceId"
         files:
           type: array
           items:
             $ref: "#/components/schemas/ResultHead"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     Result:
       allOf:
         - $ref: '#/components/schemas/ResultHead'
@@ -129,13 +192,19 @@ components:
       type: object
       required:
         - id
+        - external_id
         - file_name
         - content_type
         - checksum
         - size
         - status
+        - created_at
+        - updated_at
       properties:
         id:
+          type: string
+          format: int64
+        external_id:
           $ref: "#/components/schemas/ResourceId"
         file_name:
           type: string
@@ -148,6 +217,12 @@ components:
           format: int64
         status:
           $ref: "#/components/schemas/ResultStatus"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     ResultStatus:
       type: string
       enum: [unknown, pending, processed, failed]
@@ -161,3 +236,21 @@ components:
           type: string
         message:
           type: string
+  parameters:
+    PageIdParam:
+      name: pageId
+      in: query
+      required: false
+      schema:
+        default: 1
+        type: integer
+        minimum: 1
+    PageSizeParam:
+      name: pageSize
+      in: query
+      required: false
+      schema:
+        default: 20
+        type: integer
+        minimum: 10
+        maximum: 50

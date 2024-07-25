@@ -26,7 +26,25 @@ paths:
                 $ref: "#/components/schemas/Status"
   /files:
     description: |
-      Invoice invoice .
+      File upload service.
+    put:
+      description: |
+        Get presigned upload url.
+      operationId: presignUpload
+      requestBody:
+        description: Array of invoice files to be uploaded.
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/NewFileList'
+      responses:
+        '201':
+          description: List of uploaded invoice files.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PresignedFileList'
     post:
       description: |
         Upload invoice files.
@@ -79,24 +97,42 @@ components:
       type: object
       required:
         - id
+        - external_id
         - files
+        - created_at
+        - updated_at
       properties:
         id:
+          type: string
+          format: int64
+        external_id:
           $ref: "#/components/schemas/ResourceId"
         files:
           type: array
           items:
             $ref: "#/components/schemas/File"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
     File:
       type: object
       required:
         - id
+        - external_id
         - file_name
         - content_type
         - checksum
         - size
+        - created_at
+        - updated_at
       properties:
         id:
+          type: string
+          format: int64
+        external_id:
           $ref: "#/components/schemas/ResourceId"
         file_name:
           type: string
@@ -108,6 +144,78 @@ components:
           type: string
         size:
           type: integer
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    NewFileList:
+      type: object
+      required:
+        - external_id
+        - files
+      properties:
+        external_id:
+          $ref: "#/components/schemas/ResourceId"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/NewFile"
+    NewFile:
+      type: object
+      required:
+        - external_id
+        - file_name
+        - content_type
+        - checksum
+        - size
+      properties:
+        external_id:
+          $ref: "#/components/schemas/ResourceId"
+        file_name:
+          type: string
+          maxLength: 1024
+        content_type:
+          type: string
+          maxLength: 1024
+        checksum:
+          type: string
+        size:
+          type: integer
+    PresignedFileList:
+      type: object
+      required:
+        - id
+        - external_id
+        - files
+        - created_at
+        - updated_at
+      properties:
+        id:
+          type: string
+          format: int64
+        external_id:
+          $ref: "#/components/schemas/ResourceId"
+        files:
+          type: array
+          items:
+            $ref: "#/components/schemas/PresignedFile"
+        created_at:
+          type: string
+          format: date-time
+        updated_at:
+          type: string
+          format: date-time
+    PresignedFile:
+      allOf:
+        - $ref: '#/components/schemas/File'
+        - type: object
+          required:
+          - url
+          properties:
+            url:
+              type: string
     Error:
       type: object
       required:
