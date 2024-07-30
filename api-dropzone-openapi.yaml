@@ -2,7 +2,7 @@ openapi: "3.0.0"
 info:
   version: 1.0.0
   title: Dropzone
-  description: Dropzone API for uploading invoice files
+  description: Dropzone API for uploading invoice files.
   contact:
     name: Parsly
     email: dev@parsly.com
@@ -29,10 +29,11 @@ paths:
       File upload service.
     put:
       description: |
-        Get presigned upload url.
+        Get presigned upload urls to upload a group of files.
+        Requires at least MD5 checksum of each file.
       operationId: presignUpload
       requestBody:
-        description: Array of invoice files to be uploaded.
+        description: List of invoice files to be uploaded.
         required: true
         content:
           application/json:
@@ -47,12 +48,15 @@ paths:
                 $ref: '#/components/schemas/PresignedFileList'
     post:
       description: |
-        Upload invoice files.
+        Upload a group of files. Limited to 10 MB maximum file size.
+        Limited to application/pdf, image/jpg and image/png content types.
+        Optional external-id can be provided for each file via the
+        X-File-Id request header in each part upload.
       operationId: postFiles
       parameters:
-        - name: uploadId
+        - name: externalId
           in: query
-          description: Optional upload ID (automatically assigned if omitted)
+          description: Optional file group upload ID (automatically assigned if omitted)
           required: false
           schema:
             $ref: "#/components/schemas/ResourceId"
@@ -71,10 +75,11 @@ paths:
                     format: binary
             encoding:
               file:
-                contentType: multipart/form-data
+                contentType: application/pdf, image/jpg, image/png
                 headers:
                   X-File-Id:
                     description: Optional file ID (automatically assigned if omitted)
+                    required: false
                     schema:
                       $ref: "#/components/schemas/ResourceId"
       responses:
@@ -93,8 +98,18 @@ components:
       minLength: 8
       maxLength: 256
       pattern: '^[a-zA-Z0-9]+[a-zA-Z0-9\-]*[a-zA-Z0-9]+$'
+      example: '40DA103E-D405-4205-B716-1ACA27758687'
+      description: User-definable ID. Must be unique for each resource type.
+    Checksum:
+      type: string
+      minLength: 24
+      maxLength: 24
+      pattern: '^[-A-Za-z0-9+/=]{22}==$'
+      example: "W69NzeD3E2x297ehCGRBvg=="
+      description: Fingerprint of file to verify its integrity.
     FileList:
       type: object
+      description: Logical grouping of uploaded files.
       required:
         - id
         - external_id
@@ -105,6 +120,7 @@ components:
         id:
           type: string
           format: int64
+          description: ID of uploaded file group.
         external_id:
           $ref: "#/components/schemas/ResourceId"
         files:
@@ -114,11 +130,16 @@ components:
         created_at:
           type: string
           format: date-time
+          example: "2024-07-30T07:35:54.184732Z"
+          description: Time when this file group was created.
         updated_at:
           type: string
           format: date-time
+          example: "2024-07-30T07:35:54.184732Z"
+          description: Time when this file group record was last updated.
     File:
       type: object
+      description: File containing invoices.
       required:
         - id
         - external_id
@@ -132,26 +153,39 @@ components:
         id:
           type: string
           format: int64
+          example: 3418147724682331141
+          description: ID of file.
         external_id:
           $ref: "#/components/schemas/ResourceId"
         file_name:
           type: string
           maxLength: 1024
+          example: "invoice-20240717-sth.pdf"
+          description: File name.
         content_type:
           type: string
           maxLength: 1024
+          example: "application/pdf"
+          description: Type of content in the file.
         checksum:
-          type: string
+          $ref: "#/components/schemas/Checksum"
         size:
           type: integer
+          example: 84719
+          description: Size of file in bytes.
         created_at:
           type: string
           format: date-time
+          example: "2024-07-30T07:35:54.550851Z"
+          description: Time when permission to upload this file was first granted. 
         updated_at:
           type: string
           format: date-time
+          example: "2024-07-30T07:35:54.550851Z"
+          description: Time when this file record was last updated.
     NewFileList:
       type: object
+      description: Logical grouping of files to upload.
       required:
         - external_id
         - files
@@ -165,24 +199,26 @@ components:
     NewFile:
       type: object
       required:
-        - external_id
-        - file_name
-        - content_type
         - checksum
-        - size
       properties:
         external_id:
           $ref: "#/components/schemas/ResourceId"
         file_name:
           type: string
           maxLength: 1024
+          example: "invoice-20240717-sth.pdf"
+          description: File name.
         content_type:
           type: string
           maxLength: 1024
+          example: "application/pdf"
+          description: Type of content in the file.
         checksum:
-          type: string
+          $ref: "#/components/schemas/Checksum"
         size:
           type: integer
+          example: 84719
+          description: Size of file in bytes.
     PresignedFileList:
       type: object
       required:
@@ -204,9 +240,13 @@ components:
         created_at:
           type: string
           format: date-time
+          example: "2024-07-30T07:35:54.184732Z"
+          description: Time when this file group was created.
         updated_at:
           type: string
           format: date-time
+          example: "2024-07-30T07:35:54.184732Z"
+          description: Time when this file group record was last updated.
     PresignedFile:
       allOf:
         - $ref: '#/components/schemas/File'
@@ -216,6 +256,8 @@ components:
           properties:
             url:
               type: string
+              example: "https://parsly-files-123.s3.eu-west-1.amazonaws.com/40DA103E-D405-4205-B716-1ACA27758687/B13A9DD6-C291-4748-B341-DAC66B5EB812?X-Amz-Algorithm=AWS4-HMAC-SHA256\u0026X-Amz-Credential=ASIAW3MEDGHT5I6MNJ7N%2F20240720%2Feu-west-1%2Fs3%2Faws4_request\u0026X-Amz-Date=20240720T125148Z\u0026X-Amz-Expires=900\u0026X-Amz-Security-Token=IQoJb3JpZ2luX2VxEF0aCWV1LXdlc3QtMSJHMEUCIQCZrDz%2FXxT38YIwLJTXQ6YQuczDgAQKWawunmgzMnCWMwIgdTFn%2BJwjVqTsbfft9hHdK6Kt70qc1nZJjFArzLq4wKcq5AIIRhAAGgw0NzExMTI4MjMyNzEiDL%2F%2Fjsh4axq%2F5hMyZCrBApT57%2BxjIkk84BJ74L8HICVmTxBCK68xXIQE%2BdkGkNbVndUf4eFEM0%2FUQaFMLERlWGYNpb5Htu8rhIeB75nnraJ%2B1K2hlHFfmBNix0CUIzm69DAvPy0s7U4XtI2viv1ObvBLof06eDfT7f55c5s3hSHf4BHMkff%2FGrMB4nDedyjNYYFJNgVf1vFK1t3Gw5GPWwmkeqdSMP6hqFdlJ8uDUauSN%2Bj%2FbJ2xwv55SgwBsVw0U%2BtHigjXGrt6rJt1oyTBgzGkv38GT9oGWF8hzZ%2BY%2FNHKZzoKE9zy%2Bm6QTGPKYV6KyZgDaqJIM1Mq4JEdEbmh0OmtIfhe%2FmksJEBZT1vV0JKrrdPmUaFFCMtX9lFosgTdQIESVeOyp%2BccbJTk6yw%2BK4xHCPizya3aP7H%2BGB4ZxM8Ws5A1uSLaWR6D7Pj03a6ZozDjw6O1BjqeAbi255%2BTH3MppyaNSxKDSCI0kuxKNtGeez%2B0QEcXWDJDYOkmsJpYO6TAiEKizM4xZ0ICVxbWAaN3SdUU67G1HTVF91sxq%2F%2BYgIZgkDGG4gB1yEMMTYMIKwcyuXb7ZvTLESALuo6C3IEDQwbLoM4fKT7%2BszJ953qreI%2FZrirRF%2F%2B5POQ6IfP2XPlBcnYVWs92EyhX8UXwIZ0MCreQ8joY\u0026X-Amz-SignedHeaders=content-md5%3Bhost\u0026X-Amz-Signature=e01597e4dd9d1bbf7a87290db57b16d9ab2bdb7e6ed8765f4c92caab116222d9"
+              description: Presigned upload url.
     Error:
       type: object
       required:
