@@ -1,7 +1,7 @@
 
-.DEFAULT_GOAL := publish
-
 PROJECT_ROOT = $(shell git rev-parse --show-toplevel)
+
+.DEFAULT_GOAL := $(PROJECT_ROOT)/index.html
 
 build:
 	install -d -m 700 $@
@@ -24,17 +24,20 @@ build/openapi.yaml: build/0-datasyncer-openapi.yaml build/1-accountsadmin-openap
 build/sanitized.yaml: build/openapi.yaml
 	yq 'del(.paths.* | select(key == "/placeholder")) | del(.tags[] | select(.name == "Placeholder"))' $< > $@
 
-index.html: export NODE_NO_WARNINGS = 1
-index.html: build/sanitized.yaml
+build/index.html: export NODE_NO_WARNINGS = 1
+build/index.html: build/sanitized.yaml
 	npx @redocly/cli build-docs $< -o $@
 
+$(PROJECT_ROOT)/index.html: build/index.html
+	cp build/index.html $(PROJECT_ROOT)/index.html
+
 .PHONY: publish
-publish: index.html
-	git add index.html && git commit -m "Updated api" && git push
+publish: $(PROJECT_ROOT)/index.html
+	cd $(PROJECT_ROOT) && git add index.html && git commit -m "Updated api" && git push
 
 .PHONY: browse
-browse: index.html
-	open index.html
+browse: $(PROJECT_ROOT)/index.html
+	open $(PROJECT_ROOT)/index.html
 
 .PHONY: clean
 clean:
