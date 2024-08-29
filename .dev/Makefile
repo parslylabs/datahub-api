@@ -21,7 +21,11 @@ build/openapi.yaml: export NODE_NO_WARNINGS = 1
 build/openapi.yaml: build/0-datasyncer-openapi.yaml build/1-accountsadmin-openapi.yaml
 	npx @redocly/cli join --without-x-tag-groups build/*-openapi.yaml -o $@
 
-build/sanitized.yaml: build/openapi.yaml
+# uses redocly.yaml to filter internal apis
+build/openapi-external.yaml: build/openapi.yaml
+	npx @redocly/cli bundle external@latest --output build/openapi-external.yaml
+
+build/sanitized.yaml: build/openapi-external.yaml
 	yq 'del(.paths.* | select(key == "/placeholder")) | del(.tags[] | select(.name == "Placeholder"))' $< > $@
 
 build/index.html: export NODE_NO_WARNINGS = 1
