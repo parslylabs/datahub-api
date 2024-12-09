@@ -45,7 +45,7 @@ $(KOTLIN_ASSETS): $(BUILD_PATH)/kt-%-openapi.json:
 # override server on path-level
 $(subst /kt-,/sanitized-,$(KOTLIN_ASSETS)): $(BUILD_PATH)/sanitized-%-openapi.json: $(KOTLIN_ASSETS)
 	server=$$(jq -r .servers[0].url $(subst /sanitized-,/kt-,$@)); \
-	jq --arg keyword $* '.paths[][].operationId |= "op_keyspace_" + $$keyword[0:2] + "_" + . | .paths=(.paths | with_entries(.key |= "/" + $$keyword + .)) | .paths[][].tags = [$$keyword] | .info.title = "Product API" | .paths[].servers[0].url = "$${server}"' $(subst /sanitized-,/kt-,$@) > $@
+	jq --arg keyword $* '.paths[][].operationId |= "op_keyspace_" + $$keyword[0:2] + "_" + . | .paths=(.paths | with_entries(.key |= "/" + $$keyword + .)) | .paths[][].tags = [$$keyword] | .info.title = "Product API" | .paths[].servers[0].url = "'$${server}'"' $(subst /sanitized-,/kt-,$@) > $@
 
 # for x in .dev/build/kt-*.json; do echo -en $x; jq .info.title $x; done
 $(BUILD_PATH)/3-kt-openapi.yaml: export NODE_NO_WARNINGS = 1
@@ -63,9 +63,12 @@ $(BUILD_PATH)/openapi-external.yaml: $(BUILD_PATH)/openapi.yaml
 # delete placeholder paths
 # delete placeholder tags
 # delete placeholder tag groups
-# delete prefix from operators that contain service keyword (previously added to solve conflict before redocly join)
+# delete prefix from operators that contain service keyword (to solve conflict before redocly join)
 $(BUILD_PATH)/sanitized.yaml: $(BUILD_PATH)/openapi-external.yaml
-	yq 'del(.paths.* | select(key == "/placeholder")) | del(.tags[] | select(.name|match(".*Placeholder"))) | del(.x-tagGroups[].tags[] | select(match(".*Placeholder"))) | (.. | select(tag == "!!str" and key == "operationId")) |= sub("op_keyspace_.._", "")' $< > $@
+		yq 'del(.paths.* | select(key == "/placeholder")) | del(.tags[] | select(.name|match(".*Placeholder"))) | del(.x-tagGroups[].tags[] | select(match(".*Placeholder"))) | (.. | select(tag == "!!str" and key == "operationId")) |= sub("op_keyspace_.._", "")' $< > $@
+
+# NOTE: removing prefix (previously added with '"op_keyspace_" + $$keyword[0:2]') from (kotlin) paths does not work because paths must be unique for redocly build-docs
+#		yq 'del(.paths.* | select(key == "/placeholder")) | del(.tags[] | select(.name|match(".*Placeholder"))) | del(.x-tagGroups[].tags[] | select(match(".*Placeholder"))) | .paths=(.paths | with_entries(.key |= sub("/op_keyspace_..", ""))) | (.. | select(tag == "!!str" and key == "operationId")) |= sub("op_keyspace_.._", "")' $< > $@
 
 $(BUILD_PATH)/index.html: export NODE_NO_WARNINGS = 1
 $(BUILD_PATH)/index.html: $(BUILD_PATH)/sanitized.yaml
