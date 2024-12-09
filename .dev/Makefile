@@ -45,7 +45,7 @@ $(KOTLIN_ASSETS): $(BUILD_PATH)/kt-%-openapi.json:
 # override server on path-level
 $(subst /kt-,/sanitized-,$(KOTLIN_ASSETS)): $(BUILD_PATH)/sanitized-%-openapi.json: $(KOTLIN_ASSETS)
 	server=$$(jq -r .servers[0].url $(subst /sanitized-,/kt-,$@)); \
-	jq --arg keyword $* '.paths[][].operationId |= "op_keyspace_" + $$keyword[0:2] + "_" + . | .paths=(.paths | with_entries(.key |= "/" + $$keyword + .)) | .paths[][].tags = [$$keyword] | .info.title = "Product API" | .paths[].servers[0].url = "'$${server}'"' $(subst /sanitized-,/kt-,$@) > $@
+	jq --arg keyword $* '.paths[][].operationId |= "op_keyspace_" + $$keyword[0:2] + "_" + . | .paths=(.paths | with_entries(.key |= "/op_keyspace_" + $$keyword[0:2] + .)) | .paths[][].tags = [$$keyword] | .info.title = "Product API" | .paths[].servers[0].url = "'$${server}'"' $(subst /sanitized-,/kt-,$@) > $@
 
 # for x in .dev/build/kt-*.json; do echo -en $x; jq .info.title $x; done
 $(BUILD_PATH)/3-kt-openapi.yaml: export NODE_NO_WARNINGS = 1
@@ -67,15 +67,16 @@ $(BUILD_PATH)/openapi-external.yaml: $(BUILD_PATH)/openapi.yaml
 $(BUILD_PATH)/sanitized.yaml: $(BUILD_PATH)/openapi-external.yaml
 		yq 'del(.paths.* | select(key == "/placeholder")) | del(.tags[] | select(.name|match(".*Placeholder"))) | del(.x-tagGroups[].tags[] | select(match(".*Placeholder"))) | (.. | select(tag == "!!str" and key == "operationId")) |= sub("op_keyspace_.._", "")' $< > $@
 
-# NOTE: removing prefix (previously added with '"op_keyspace_" + $$keyword[0:2]') from (kotlin) paths does not work because paths must be unique for redocly build-docs
+# NOTE: deleting prefix from paths that contain service keyword does not work before redocly build-docs because paths must be unique
 #		yq 'del(.paths.* | select(key == "/placeholder")) | del(.tags[] | select(.name|match(".*Placeholder"))) | del(.x-tagGroups[].tags[] | select(match(".*Placeholder"))) | .paths=(.paths | with_entries(.key |= sub("/op_keyspace_..", ""))) | (.. | select(tag == "!!str" and key == "operationId")) |= sub("op_keyspace_.._", "")' $< > $@
 
 $(BUILD_PATH)/index.html: export NODE_NO_WARNINGS = 1
 $(BUILD_PATH)/index.html: $(BUILD_PATH)/sanitized.yaml
 	npx @redocly/cli build-docs $< -o $@
 
+# delete prefix from paths that contain service keyword (to work-around conflict after redocly build-docs)
 $(PROJECT_ROOT)/index.html: $(BUILD_PATH)/index.html
-	cp $(BUILD_PATH)/index.html $(PROJECT_ROOT)/index.html
+	sed 's|/op_keyspace_..||g' $< > $@
 
 .PHONY: publish
 publish: $(PROJECT_ROOT)/index.html
