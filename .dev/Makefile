@@ -53,7 +53,7 @@ $(BUILD_PATH)/3-kt-openapi.yaml: $(BUILD_PATH) $(subst /kt-,/sanitized-,$(KOTLIN
 	npx @redocly/cli join --prefix-components-with-info-prop title --prefix-tags-with-info-prop title $(subst /kt-,/sanitized-,$(KOTLIN_ASSETS)) -o $@
 
 $(BUILD_PATH)/openapi.yaml: export NODE_NO_WARNINGS = 1
-$(BUILD_PATH)/openapi.yaml: $(BUILD_PATH)/0-datasyncer-openapi.yaml $(BUILD_PATH)/1-accountsadmin-openapi.yaml $(BUILD_PATH)/2-postal-openapi.yaml $(BUILD_PATH)/3-kt-openapi.yaml
+$(BUILD_PATH)/openapi.yaml: $(BUILD_PATH)/0-datasyncer-openapi.yaml $(BUILD_PATH)/1-accountsadmin-openapi.yaml $(BUILD_PATH)/2-postal-openapi.yaml #$(BUILD_PATH)/3-kt-openapi.yaml
 	npx @redocly/cli join --prefix-components-with-info-prop title $(BUILD_PATH)/*-openapi.yaml -o $@
 
 # uses redocly.yaml to filter internal apis
